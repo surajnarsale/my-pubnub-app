@@ -1,0 +1,15 @@
+{
+  "appId": "com.example.app",
+  "appName": "My App",
+  "bundledWebRuntime": false,
+  "npmClient": "npm",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#ffffffff"
+  },
+  "server": {
+    "url": "http://localhost:3000",
+    "cleartext": true
+  }
+}

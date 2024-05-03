@@ -1,35 +1,83 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import PubNub from "pubnub";
+import { PubNubProvider, usePubNub } from "pubnub-react";
 
-function App() {
-  const [count, setCount] = useState(0)
+const pubnubConfig = {
+  publishKey: "key",
+  subscribeKey: "key",
+  uuid: "key",
+  ssl: true,
+};
+
+const ChatComponent = () => {
+  const pubnub = usePubNub();
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    const logListener = {
+      message: (event) => {
+        console.log("New event:", event);
+        setMessages((msgs) => [...msgs, event.message]);
+      },
+      status: (statusEvent) => {
+        console.log("Status event:", statusEvent);
+      },
+      presence: (presenceEvent) => {
+        console.log("Presence event:", presenceEvent);
+      },
+    };
+
+    pubnub.addListener(logListener);
+    console.log("Subscribing to channel 'test-channel'.");
+    pubnub.subscribe({ channels: ["test-channel"] });
+
+    return () => {
+      console.log("Cleaning up: unsubscribing from all channels.");
+      pubnub.removeListener(logListener);
+      pubnub.unsubscribeAll();
+    };
+  }, [pubnub]);
+
+  const sendMessage = () => {
+    if (text) {
+      console.log("Sending message:", text);
+      pubnub.publish({
+        channel: "test-channel",
+        message: { text },
+        callback: (status, response) => {
+          console.log("Publish status:", status);
+          console.log("Publish response:", response);
+        },
+      });
+      setText("");
+    }
+  };
 
   return (
-    <>
+    <div>
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+      />
+      <button onClick={sendMessage}>Send Message</button>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        {messages.map((msg, index) => (
+          <div key={index}>{msg.text}</div>
+        ))}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    </div>
+  );
+};
 
-export default App
+const App = () => {
+  return (
+    <PubNubProvider client={new PubNub(pubnubConfig)}>
+      <ChatComponent />
+    </PubNubProvider>
+  );
+};
+
+export default App;
